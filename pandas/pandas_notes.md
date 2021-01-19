@@ -101,7 +101,7 @@ This will result in observations for which the color is either pink OR red.
 Adding a new column can be done in several ways. Let's first look at creating a new column based on an existing column. Suppose we have a column `distance` in miles. We wish to convert that into kilometers. Here's how we can do this: 
 
 ```python
-df.loc[:, 'distance_km'] df.loc[:, 'distance'] * 1.64
+df.loc[:, 'distance_km'] = df.loc[:, 'distance'] * 1.64
 ```
 
 
@@ -245,7 +245,7 @@ df.pivot_table(values='weight', index='color', columns='breed', fill_value=0
                aggfunc=[np.median, np.mean])
 ```
 
->   The difference is that what we groupby is called `index` in `pivot_table` and what we apply the aggregation function is called `values`.  For additional columns we use the variable `columns`
+>   The difference between `groupby `and `pivot_table` is that what we groupby is called `index` in `pivot_table` and what we apply the aggregation function to is called `values`.  For additional columns we use the variable `columns`
 
 We add the `fill_value=0` because without it, we will have `NaN` where there is no data. 
 
@@ -255,4 +255,197 @@ We can add the `margins=True` flag to compute the mean values down and across th
 df.pivot_table(values='weight', index='color', columns='breed',
               fill_value=0, margins=True)
 ```
+
+
+
+## Slicing & Indexing
+
+The index is used to identify the observations or the rows in a data frame while the columns are used to identify the column names or features. 
+
+### Setting an Index
+
+An index can be set using the `.set_index()` method: 
+
+```python
+df_new = df.set_index('name')
+```
+
+We can undo the setting of the index using the `.reset_index()` method: 
+
+```python
+df_new.reset_index(drop=True)
+```
+
+This will reset the index and what the initial index was is then dropped. If this were not used, the index then becomes a column in the data frame. 
+
+Indexing makes thing easier for subsetting. Let's consider the following code: 
+
+```python
+dogs[dogs['name'].isin(['Bella', 'Stella'])]
+```
+
+This is a bit more complicated than if we set the `name` as an index in the data frame and indexed that frame: 
+
+```python
+dogs.loc[["Bella", "Stella"]]
+```
+
+>   Values in the index don't need to be unique
+
+### Setting Multiple Indexes
+
+We can set multiple indexes by passing a list of column names as index: 
+
+```python
+dogs2 = dogs.set_index(['breed', 'color'])
+```
+
+This is known as multi-level indexes. This creates a data frame such as this: 
+
+<img src="pandas_notes.assets/image-20210119085510982.png" alt="image-20210119085510982" style="zoom:80%;" />
+
+We see two index columns for a given data frame. 
+
+To access the outer index, we pass a list: 
+
+```python
+dogs2.loc[['Labrador', 'Chihuahua']]
+```
+
+<img src="pandas_notes.assets/image-20210119085623798.png" alt="image-20210119085623798" style="zoom:80%;" />
+
+To access the inner index, we pass a tuple: 
+
+```python
+dogs2.loc[[('Labrador', 'Brown'), ('Chihuahua', 'Tan')]]
+```
+
+<img src="pandas_notes.assets/image-20210119085727472.png" alt="image-20210119085727472" style="zoom:80%;" />
+
+### Sorting an Index
+
+We can sort a data frame by its index: 
+
+```python
+dogs2.sort_index()
+```
+
+The default is in ascending order. Just like sorting columns, we can pass a list of index columns to sort and the level: 
+
+```python
+dogs2.sort_index(level=['color', 'breed'], ascending=[True, False])
+```
+
+>   Indexes can be more complicated and goes against "tidy data" philosophy. So, use indexes and manipulation when required
+
+## Slicing
+
+Slicing and subsetting is done using the `.loc` and `.iloc` attributes. 
+
+### Slicing by Indexes
+
+In case of multiple indexes, **the slicing of the outer index level** is done in the following way: 
+
+```python
+dogs2.loc['Chow Chow': 'Poodle']
+```
+
+Note that the unlike slicing of lists, the last value of the sliced is included. So, here we see that `Poodle` will be included. 
+
+When slicing the inner index level, we pass the tuple: 
+
+```python
+dogs2.loc[('Labrador', 'Brown'):('Schnauzer', 'Grey')]
+```
+
+### Slicing by Columns
+
+We can also slice by column using the `.loc` attribute: 
+
+```python
+dogs2.loc[:, 'name':'height']
+```
+
+where `name` and `height` are two column names. 
+
+### Slicing Using Dates
+
+Slicing using dates is much easier if the date column is set as an index. Once this is done, we can simply choose the date range: 
+
+```python
+dogs.loc['2014-01-03':'2016-09-28']
+```
+
+The great thing with dates is that we can pass partial dates too to get what we want: 
+
+```python
+dogs.loc['2014':'2016']
+```
+
+This will return all records from 2014 to 2016. 
+
+## Slicing by Row of Column Number
+
+We can slice a data frame using a row or column number using the `.iloc` attribute
+
+```python
+dogs.iloc[2:5, 1:4]
+```
+
+This will return rows from 2 to 4 and columns from 1 to 3. 
+
+<img src="pandas_notes.assets/image-20210119092217096.png" alt="image-20210119092217096" style="zoom:80%;" />
+
+## Subsetting Pivot Tables
+
+Subsetting pivot tables can easily be done using the `loc` and `iloc` attributes. This is because the pivot tables create single or multiple indexes. Thus we can easily use the methods we have learned to slice a multi-index data frame. 
+
+The use of calculating descriptive statistics in pivot tables is slightly different. For example, if we wish to compute the mean **across rows**, we would do the following: 
+
+```python
+my_pivot_table.mean(axis='index')
+```
+
+While computing the mean **across columns**, we would do the following: 
+
+```python
+my_pivot_table.mean(axis='columns')
+```
+
+## Looking for Missing Values
+
+pandas allows you to look for missing values. This can be done in the following way: 
+
+```python
+df.isna().any()
+```
+
+will return all the columns and a boolean associated with it to tell you if any of the columns have missing values. 
+
+<img src="pandas_notes.assets/image-20210119105439043.png" alt="image-20210119105439043" style="zoom:50%;" />
+
+We can also count the total number of missing values by columns by using `.isna().sum()`
+
+Here are ways to address missing values: 
+
+*   Drop them using the `.dropna()`
+*   Fill the values with a constant value: `.fillna(<value>)`
+
+## Creating DataFrames
+
+Data frames in pandas can be created using **dictionaries**. We can either create from a list of dictionaries and dictionary of lists. 
+
+### Dataframe from a List of Dictionaries
+
+Here's an example of creating a dataframe from a list of dictionaries: 
+
+<img src="pandas_notes.assets/image-20210119110222991.png" alt="image-20210119110222991" style="zoom:50%;" />
+
+### Dataframe from Dictionary of Lists
+
+<img src="pandas_notes.assets/image-20210119110402262.png" alt="image-20210119110402262" style="zoom:50%;" />
+
+
+
+
 
