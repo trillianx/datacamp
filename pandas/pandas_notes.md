@@ -212,6 +212,22 @@ df.groupby(['color', 'breed'])['weights'].agg([min, max, sum])
 
 So, here we group the data by `color` and `breed` and then compute the `min`, `max`, and `sum` of weights. 
 
+Another way to groupby is by passing the account on which we wish to do an aggregation. Given a table: 
+
+<img src="pandas_notes.assets/image-20210121102942679.png" alt="image-20210121102942679" style="zoom:50%;" />
+
+For example, both are equivalent: 
+
+```python
+# One way of doing it
+result = licenses_owners.groupby('title')['account'].count()
+
+# Another way of doing it
+counted_df = licenses_owners.groupby('title').agg({'account':'count'})
+```
+
+
+
 ### Pivot Tables
 
 Pivot tables are something we have seen in Excel. Here's how the code differs: 
@@ -444,6 +460,166 @@ Here's an example of creating a dataframe from a list of dictionaries:
 ### Dataframe from Dictionary of Lists
 
 <img src="pandas_notes.assets/image-20210119110402262.png" alt="image-20210119110402262" style="zoom:50%;" />
+
+
+
+
+
+## Joining Data
+
+In the series of sections we will explore the ways to join or merge multiple data frames. 
+
+### Data Merging Basics
+
+The pandas package has a `.merge()` method to merge two datasets. Here's an example: 
+
+```python
+df_final = df1.merge(df2, on='key')
+```
+
+The `'key'` is the key column that allows us to merge the two datasets on. What we have just done is called an **inner join**. 
+
+When there are multiple columns that are present in both the tables, the duplicate columns will have a suffix associated with it such as `column_y`. We can use a custom suffix by passing suffixes: 
+
+```python
+df_final = df1.merge(df2, on='key', suffixes=('_this_col_from_x', 'that_col_from_y'))
+```
+
+where the suffixes for the columns that are present in both tables. For example, if we have joined two tables `taxi_own_veh` and `taxi_veh` and both have `owner` column besides the `vid` column that is used to join, we will get something like this when we join the two tables: 
+
+```python
+# Merge the taxi_owners and taxi_veh tables setting a suffix
+taxi_own_veh = taxi_owners.merge(taxi_veh, on='vid', suffixes=('_own', '_veh'))
+
+# Print the column names of taxi_own_veh
+print(taxi_own_veh.columns)
+
+
+Index(['rid', 'vid', 'owner_x', 'address', 'zip', 'make', 'model', 'year', 'fuel_type', 'owner_y'], dtype='object')
+```
+
+Notice the `owner_x`. We can remove them using the `suffixes=('_own', '_veh')`, which returns: 
+
+```python
+Index(['rid', 'vid', 'owner_own', 'address', 'zip', 'make', 'model', 'year', 'fuel_type', 'owner_veh'], dtype='object')
+```
+
+
+
+### One to Many Relationships
+
+We will discuss various relationship between tables. 
+
+#### One-to-One Relationship
+
+Given two tables, every row in the left table is related to only one row in the right table. 
+
+<img src="pandas_notes.assets/image-20210121102010861.png" alt="image-20210121102010861" style="zoom:50%;" />
+
+#### One-to-many Relationship
+
+Given two tables, every row in the left table is related to one or more rows in the right table. 
+
+<img src="pandas_notes.assets/image-20210121102223799.png" alt="image-20210121102223799" style="zoom:50%;" />
+
+The good thing to note is that we do not need to change anything in our `.merge()` method if there is a one-to-many. pandas takes care of this by itself. 
+
+>   When there is a one-to-many relationships, the two number of rows in the resultant table will explode! So, care needs to be taken when merging. 
+
+#### Merging Multiple Tables
+
+At times, it may be necessary to merge two tables on two columns rather than one as this creates a unique record between tables. In order to pass multiple columns, we simply pass a list of column names to the `on` key: 
+
+```python
+df_result = df1.merge(df2, on=['col1', 'col2'])
+```
+
+We can merge multiple tables by merging two tables first and then merging the result of the two tables with the third. We can also do this in one line: 
+
+```python
+df_result = df1.merge(df2, on=['col1', 'col2']) \
+               .merge(df3, on='col_comb')
+```
+
+The back slash allows for breaking the command in two lines. This chaining can be done with N number of tables. 
+
+### Left Join
+
+The left join returns all the records from the left table and only the records from the right table that match. 
+
+<img src="pandas_notes.assets/image-20210121105924860.png" alt="image-20210121105924860" style="zoom:50%;" />
+
+We see that C5 is skipped as it does not match with that of the left table. 
+
+The syntax for doing a left join is the following: 
+
+```python
+df_result = df1.merge(df2, on='col', how='left')
+```
+
+### Right Join
+
+The right join returns all the records from the right join and only records from the left table that match. 
+
+<img src="pandas_notes.assets/image-20210121110728827.png" alt="image-20210121110728827" style="zoom:50%;" />
+
+We see that all the records from the right table are included but only those that matched with the left are included. 
+
+The syntax for doing a right join is the following: 
+
+```python
+df_result = df1.merge(df2, left_on='col', right_on='col2', how='right')
+```
+
+We need to use `left_on` and `right_on` when the keys in both tables have different names. 
+
+### Outer Join
+
+The outer join will return the records from both tables irrespective whether they match or not. If they don't match, you will see NaNs in those records. 
+
+The syntax is the following: 
+
+```python
+df_result = df1.merge(df2, on='col', how='outer')
+```
+
+### Self Join
+
+The self join is joining the table to itself. This is done in the following way: 
+
+```python
+df_result = df1.merge(df1, left_on='col1', right_on='col2')
+```
+
+Note that we join the same table to itself on different columns. This creates an inner join. 
+
+We can also do a self join using a left join: 
+
+```python
+df_result = df1.merge(df1, left_on='col1', right_on='col2', how='left')
+```
+
+The common situations when self join is used are: 
+
+*   Hierarchical Relationships
+*   Sequential Relationships
+*   Graph Data
+
+### Merging on Indexes
+
+Merging on index looks just like the merge we have seen before. We pass the index name in `'on='` argument to merge. 
+
+Merging multi-index involves use the use of `index_col` as follows: 
+
+```python
+df_result = df1.merge(df2, on=['index_col1', 'index_col2'])
+```
+
+This is exactly how we did an inner join on mutiple columns. When the index columns have different index names, we then use the `left_on` and `right_on` as follows: 
+
+```python
+df_result = df1.merge(df2, left_on='col1', right_on='col2', left_index=True, right_index=True)
+```
 
 
 
