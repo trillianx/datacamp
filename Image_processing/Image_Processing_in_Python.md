@@ -261,3 +261,196 @@ Global filtering:
 ## Chapter 2: Filters, Contrast, Transformation, and Morphology
 
 You will learn to **detect object shapes** using edge detection filters, **improve medical images** with contrast enhancement **and even enlarge pictures to five times its original size!** You will also apply morphology to make thresholding more accurate when segmenting images and go to the next level of processing images with Python.
+
+### Filtering
+
+Filtering is a technique that is used to enhance an image. In addition, filtering is used for: 
+
+*   Emphasizing or removing features
+*   Smoothing
+*   Sharpening
+*   Edge Detection
+
+Certain image processing operations involve processing an image in sections, called blocks or neighborhoods, rather than processing the entire image at once. This is the case for filtering, histogram equalization for contrast enhancement, and morphological functions, all three of which use this approach.
+
+Fiiltering can also be used for edge detection. Edge detection is finding boudaries of objects within an image. Edge detection works by detecting discontinuities in brightness. This is seen in the image here: 
+
+<img src="Image_Processing_in_Python.assets/image-20210125131026295.png" alt="image-20210125131026295" style="zoom:50%;" />
+
+#### Sobel 
+
+The most common method for edge detection is **sobel**. 
+
+```python
+from skimage.filters import sobel
+edge_sobel = sobel(image_chocolate)
+plot_comparison(image_chocolate, edge_sobel, 'Edge with Sobel')
+```
+
+>   Sobel requires a 2D grayscale image as input
+
+The `plot_comparison` function is defined as follows: 
+
+```python
+def plot_comparison(original, filtered, title_filtered):
+    fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(8,6),
+                                   sharex=True, sharey=True)
+    ax1.imshow(original, cmap=plt.cm.gray)
+    ax1.set_title('original')
+    ax1.axis('off')
+    ax2.imshow(filtered, cmap=plt.cm.gray)
+    ax2.set_title(title_filtered)
+    ax2.axis('off')
+```
+
+#### Gaussian Smoothing
+
+The Gaussian smoothing technique is used to blur an image or to reduce noise. This filter blurs edges and reduces contrast. 
+
+```python
+from skimage.filters import gaussian
+
+# Apply edge detection filter
+gaussian_image = gaussian(amsterdam_pic, mutlchannel=True)
+
+plot_comparison(amsterdam_pic, gaussian_image, 'Blurred with Gaussian')
+```
+
+>   The `multichannel` is set to `True` if the image is color, else it needs to be set to `False`
+
+### Contrast Enhancement
+
+Contrast enhancement is generally used for images that have low contrast. For example, medical images such as this has low contrast: 
+
+<img src="Image_Processing_in_Python.assets/image-20210125132422606.png" alt="image-20210125132422606" style="zoom:33%;" />
+
+Increasing the contrast helps to identify critical information in an image. Contrast can be seen as a measure of an image's dynamic range or the spread in an histogram. A high contrast image has a broader histogram while a low contrast has a narrow histogram. 
+
+Contrast enhancement increases or widens the histogram so that the entire range is filled. This is known as **contrast stretching**. Another technique used to increase contrast is called **histogram equalization**. Here the most frequent values are spread using probability distribution. 
+
+#### Histogram Equalization
+
+There are three types of histogram equalizations: 
+
+1.  Standard Histogram Equalization - Uses global histogram values
+2.  Adaptive Histogram Equalization
+3.  Contrast Limited Adaptive Histogram Equalization (CLAHE) - Uses histogram values based on a local region rather than a global histogram values
+
+Here's how it is done for histogram equalization:  
+
+```python
+# Import the required module
+from skimage import exposure
+
+# Use histogram equalization to improve the contrast
+image_eq =  exposure.equalize_hist(image_aerial)
+
+# Show the original and resulting image
+show_image(image_aerial, 'Original')
+show_image(image_eq, 'Resulting image')
+```
+
+We can see the results here: 
+
+<img src="Image_Processing_in_Python.assets/image-20210125134141596.png" alt="image-20210125134141596" style="zoom:80%;" />
+
+And here's the line of code for CLAHE: 
+
+```python
+# Import the necessary modules
+from skimage import data, exposure
+
+# Load the image
+original_image = data.coffee()
+
+# Apply the adaptive equalization on the original image
+adapthist_eq_image = exposure.equalize_adapthist(original_image, clip_limit=0.03)
+
+# Compare the original image to the equalized
+show_image(original_image)
+show_image(adapthist_eq_image, '#ImageProcessingDatacamp')
+```
+
+We can see the result here: 
+
+<img src="Image_Processing_in_Python.assets/image-20210125134549103.png" alt="image-20210125134549103" style="zoom:80%;" />
+
+### Transformation
+
+Transformation is used to prepare images for ML models. It is also used to optmize image sizes or rotating images. 
+
+```python
+from skimage.transform import rotate
+
+# Rotate image in clockwise direction
+image_rotated = rotate(image, -90)
+
+# Rescaling images
+from skimage.transform import rescale
+# Rescale to downgrade. Make it 1/4 the origina.
+image_rescaled = rescale(image, 1/4, anti_aliasing=True, multichannel=True)
+
+# Resizing an image: 
+from skimage.transform import resize
+height, width = 400, 500
+image_resized = resize(image, (height, width), anti_aliasing=True)
+```
+
+Here's an example of resizing the image with(left) and without anti aliasing (right): 
+
+<img src="Image_Processing_in_Python.assets/image-20210125140130194.png" alt="image-20210125140130194" style="zoom:80%;" />
+
+### Morphology
+
+Spotting an object in a given image can be done by looking at its shape. This is what morphology does. Binary images, as we have seen can be distorted by noise or texture. **Morphological filtering** removes these imperfections by accouting for the form and structure of the objects in the image. These operations are suited for binary images but also work with grayscale. 
+
+The basic morphological operations are **dilation** and **erosion** as the examples show below: 
+
+<img src="Image_Processing_in_Python.assets/image-20210125141244692.png" alt="image-20210125141244692" style="zoom:50%;" />
+
+<img src="Image_Processing_in_Python.assets/image-20210125141304560.png" alt="image-20210125141304560" style="zoom:50%;" />
+
+Dilation adds pixels adds pixels at the boundaries while erosion removes pixels at the boundaries. The number of pixels added or removed from the objects in an image depends on the size and shape of a structuring element used to process the image. 
+
+A structuring element is a small binary image used to probe the input image. Here's an example of a structuring element, which is a 2x2 square. Depending on where the structuring element intersects with the image, morphological filtering is performed. For example, the intersection happens at A and B but not at C. 
+
+![image-20210125141628317](Image_Processing_in_Python.assets/image-20210125141628317.png)
+
+A structuring element can have different shapes. Each structuring element is defined by 1s in them. Here are some structuring elements: 
+
+![image-20210125141801322](Image_Processing_in_Python.assets/image-20210125141801322.png)
+
+>   The structuring element should be a shape similar to the object we want to select. 
+
+The pink cell is the center or the origin of the structuring element. We can create a structuring element in the following way: 
+
+```python
+from skimage import morphology
+
+# Create a square: 
+square = morphology.square(4)
+
+# Create a rectangle
+rectangle = morphology.rectangle(4, 2)
+```
+
+To apply erosion we do the following: 
+
+```python
+from skimage import morphology
+
+struc_elem = rectangle(12,6)
+
+eroded_image = morphology.binary_erosion(image_horse, selem=struc_elem)
+```
+
+To apply dilation, we do the following: 
+
+```python
+from skimage import morphology
+
+dilated_image = morphology.binary_dilation(image_horse)
+```
+
+>   The structuring element in the morphology functions is optional
+
